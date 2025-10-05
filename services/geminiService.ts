@@ -7,12 +7,12 @@ let ai: GoogleGenAI | null = null;
 
 function getAiClient(): GoogleGenAI {
   if (!ai) {
-    // Your build environment must be configured to expose the API_KEY.
-    // For example, using a bundler like Vite or a framework like Next.js.
-    const apiKey = process.env.API_KEY;
+    // For Vercel and other Next.js environments, client-side variables
+    // MUST be prefixed with NEXT_PUBLIC_.
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY;
     if (!apiKey) {
       // This error will be caught by the calling function and displayed to the user.
-      throw new Error("Gemini API key is not configured. Ensure the API_KEY environment variable is available in the client-side application.");
+      throw new Error("Gemini API key is not configured. Please set the NEXT_PUBLIC_API_KEY environment variable in your Vercel project settings.");
     }
     ai = new GoogleGenAI({ apiKey });
   }
