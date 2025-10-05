@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { Header } from './components/Header';
 import { LegalInputForm } from './components/LegalInputForm';
@@ -18,10 +17,9 @@ function App() {
       setError('Please enter some legal text to simplify.');
       return;
     }
-    if (!process.env.API_KEY) {
-      setError('API key is not configured. Please set it up in your environment variables.');
-      return;
-    }
+    
+    // The check for the API key is now handled within the service,
+    // which prevents the app from crashing on load with a ReferenceError.
 
     setIsLoading(true);
     setError(null);
@@ -32,7 +30,8 @@ function App() {
       setSimplifiedOutput(result);
     } catch (err) {
       console.error(err);
-      setError('An error occurred while simplifying the text. Please try again.');
+      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred. Please try again.';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

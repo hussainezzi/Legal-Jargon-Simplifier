@@ -1,12 +1,24 @@
-
 import { GoogleGenAI } from "@google/genai";
 import type { DocumentType } from '../types';
 
-if (!process.env.API_KEY) {
-  console.error("API_KEY environment variable not set.");
+// Lazily initialize the AI client to avoid accessing process.env at the top level,
+// which would cause a ReferenceError in the browser.
+let ai: GoogleGenAI | null = null;
+
+function getAiClient(): GoogleGenAI {
+  if (!ai) {
+    // Your build environment must be configured to expose the API_KEY.
+    // For example, using a bundler like Vite or a framework like Next.js.
+    const apiKey = process.env.API_KEY;
+    if (!apiKey) {
+      // This error will be caught by the calling function and displayed to the user.
+      throw new Error("Gemini API key is not configured. Ensure the API_KEY environment variable is available in the client-side application.");
+    }
+    ai = new GoogleGenAI({ apiKey });
+  }
+  return ai;
 }
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
 
 const generatePrompt = (legalText: string, documentType: DocumentType): string => {
   return `
@@ -36,7 +48,8 @@ export const simplifyLegalText = async (legalText: string, documentType: Documen
   const prompt = generatePrompt(legalText, documentType);
 
   try {
-    const response = await ai.models.generateContent({
+    const client = getAiClient();
+    const response = await client.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: prompt,
     });
@@ -44,6 +57,10 @@ export const simplifyLegalText = async (legalText: string, documentType: Documen
     return response.text;
   } catch (error) {
     console.error("Error calling Gemini API:", error);
+    // Propagate the specific error message for better user feedback.
+    if (error instanceof Error) {
+        throw error;
+    }
     throw new Error("Failed to get a response from the AI model.");
   }
 };
