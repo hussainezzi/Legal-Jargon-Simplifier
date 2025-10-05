@@ -1,0 +1,5 @@
+{
+  "name": "Legal Jargon Simplifier",
+  "description": "An AI-powered tool that simplifies complex legal documents. Paste a contract snippet, and get a one-sentence summary, a list of key risks and obligations, and a rewrite in 8th-grade language.",
+  "requestFramePermissions": []
+}
