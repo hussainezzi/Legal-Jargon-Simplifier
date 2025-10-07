@@ -1,8 +1,24 @@
+import { GoogleGenAI } from "@google/genai";
 import type { DocumentType } from '../types';
 
-// In a Vite app, environment variables must be prefixed with `VITE_` to be exposed to the client.
-// The user should ensure the environment variable in their Vercel project is named `VITE_GEMINI_URL`.
-const geminiUrl = import.meta.env.VITE_GEMINI_URL;
+// Lazily initialize the AI client to avoid accessing process.env at the top level,
+// which would cause a ReferenceError in the browser.
+let ai: GoogleGenAI | null = null;
+
+function getAiClient(): GoogleGenAI {
+  if (!ai) {
+    // For Vercel and other Next.js environments, client-side variables
+    // MUST be prefixed with NEXT_PUBLIC_.
+    const apiKey = "AIzaSyDq1c5fFbZ5ydw570R24i7TL-6ipufy_1s";
+    if (!apiKey) {
+      // This error will be caught by the calling function and displayed to the user.
+      throw new Error("Gemini API key is not configured. Please set the NEXT_PUBLIC_API_KEY environment variable in your Vercel project settings.");
+    }
+    ai = new GoogleGenAI({ apiKey });
+  }
+  return ai;
+}
+
 
 const generatePrompt = (legalText: string, documentType: DocumentType): string => {
   return `
@@ -29,47 +45,19 @@ const generatePrompt = (legalText: string, documentType: DocumentType): string =
 };
 
 export const simplifyLegalText = async (legalText: string, documentType: DocumentType): Promise<string> => {
-  if (!geminiUrl) {
-    throw new Error("Gemini URL is not configured. Please set the VITE_GEMINI_URL environment variable in your Vercel project settings.");
-  }
-
   const prompt = generatePrompt(legalText, documentType);
 
   try {
-    const response = await fetch(geminiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: prompt
-          }]
-        }]
-      }),
+    const client = getAiClient();
+    const response = await client.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to call Gemini API: ${response.status} ${response.statusText} - ${errorText}`);
-    }
-
-    const data = await response.json();
-
-    // Standard Gemini API response structure
-    if (data.candidates && data.candidates.length > 0 && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts.length > 0) {
-      return data.candidates[0].content.parts[0].text;
-    }
     
-    // Fallback for a simplified proxy that might return the text directly
-    if (typeof data.text === 'string') {
-        return data.text;
-    }
-
-    throw new Error("Invalid response structure from Gemini API proxy.");
+    return response.text;
   } catch (error) {
     console.error("Error calling Gemini API:", error);
+    // Propagate the specific error message for better user feedback.
     if (error instanceof Error) {
         throw error;
     }
